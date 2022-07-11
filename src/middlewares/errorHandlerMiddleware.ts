@@ -9,3 +9,5 @@ import { Request, Response, NextFunction } from "express";
     if(err) res.status(statusCode || 500).send(message || "Internal server error");
     next()
 }
+
+

@@ -1,11 +1,13 @@
 import { faker } from "@faker-js/faker";
 import dayjs from "dayjs";
-import cryptr from "cryptr";
+import Cryptr from "cryptr";
+import bcrypt from "bcrypt";
 
 import * as cardRepository from "../repositories/cardRepository.js";
 import * as companyService from "../services/companySerivice.js"
 import * as employeeService from "../services/employeeService.js"
-import Cryptr from "cryptr";
+
+const cryptr = new Cryptr('myTotallySecretKey');
 
 export async function createCard(apiKey: string, employeeId: number, type: cardRepository.TransactionTypes) {
     await companyService.validateApiKey(apiKey)
@@ -25,6 +27,31 @@ export async function createCard(apiKey: string, employeeId: number, type: cardR
             type,
         }
     );
+}
+
+export async function activateCard(cardId: number, cvc: string, password: string) {
+    const card = await getCardById(cardId);
+
+  validateExpirationDate(card.expirationDate);
+  validateCVC(cvc, card.securityCode);
+
+  const isAlreadyActive = card.password;
+  if (isAlreadyActive) throw { 
+    statusCode: 409, 
+    type: "conflict",
+    message: "Card already active" 
+    }
+  
+  const passwordFormat = /^d{4}$/; // 4 digits
+  if (!passwordFormat.test(password)) throw { 
+    statusCode: 400,
+    type: "bad_request",
+    message: "Password must be 4 digits"
+   };
+  
+
+  const hashedPassword = bcrypt.hashSync(password, 12);
+  await cardRepository.update(cardId, { password: hashedPassword });
 }
 
 async function isExistingCard(employeeId: number, type: cardRepository.TransactionTypes) {
@@ -54,7 +81,6 @@ function generateCardData(employeeName: string) {
 
 function generateSecurityCode() {
     const securityCode = faker.finance.creditCardCVV();
-    const cryptr = new Cryptr('myTotallySecretKey');
     return cryptr.encrypt(securityCode);
 }
 
@@ -73,4 +99,36 @@ function formatCardholderName(fullName: string) {
 
 function getFirsNameLetter(middleName: string) {
     return middleName[0];
+}
+
+
+export async function getCardById(id: number) {
+    const card = await cardRepository.findById(id);
+    if (!card)  throw {  
+        statusCode: 404, 
+        type: "not_found", 
+        message: "Card not found" 
+    };
+
+    return card;
+  }
+
+  export function validateExpirationDate(expirationDate: string) {
+    const today = dayjs().format("MM/YY");
+    if (dayjs(today).isAfter(dayjs(expirationDate))) {
+      throw { 
+        statusCode: 400, 
+        type: "bad_request", 
+        message: "Card expired" 
+        }
+    }
+  }
+
+  export function validateCVC(cvc: string, cardCVC: string) {
+  const isCVCValid = cvc === cardCVC
+  if (!isCVCValid) throw {
+    statusCode: 400, 
+    type: "bad_request", 
+    message: "CVC is invalid"
+  }
 }

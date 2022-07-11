@@ -8,3 +8,4 @@ export async function validateApiKey(apiKey: string) {
         message: "Company not found"
      };
   }
+

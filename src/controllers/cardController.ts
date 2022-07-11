@@ -7,3 +7,10 @@ export async function createCard(req: Request, res: Response) {
     await cardService.createCard(apiKey, employeeId, type);
     res.sendStatus(201);
 }
+
+export async function activateCard(req: Request, res: Response) {
+    const { cardId } = req.params;
+    const { cvc, password } = req.body;
+    await cardService.activateCard(Number(cardId), cvc, password);
+    res.sendStatus(200);
+}
