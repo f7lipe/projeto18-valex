@@ -41,7 +41,7 @@ export async function activateCard(cardId: number, cvc: string, password: string
 export async function createCard(apiKey: string, employeeId: number, type: cardRepository.TransactionTypes) {
     await companyService.validateApiKey(apiKey)
 
-    const employee = await employeeService.getById(employeeId)
+    const employee = await employeeService.getEmplpyeeById(employeeId)
 
     await isExistingCard(employeeId, type)
 
@@ -157,4 +157,10 @@ export async function getBalance(cardId: number) {
     recharges, 
     payments,
   }
+}
+
+export async function lockManager(cardId: number, password: string) {
+  const card = await getCardById(cardId);
+  validatePassword(password, card.password);
+  await cardRepository.update(cardId, { isBlocked: !card.isBlocked });
 }

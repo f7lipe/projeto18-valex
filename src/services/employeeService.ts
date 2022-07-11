@@ -1,7 +1,7 @@
 import * as employeeRepository from '../repositories/employeeRepository.js'
 
-export async function getById(id: number) {
-    console.log(id);
+export async function getEmplpyeeById(id: number) {
+
     const employee = await employeeRepository.findById(id);
     
     if (!employee) throw { 

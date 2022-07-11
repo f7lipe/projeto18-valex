@@ -23,5 +23,10 @@ router.get(
     cardController.getBalance
 )
 
+router.post(
+    "/locker/:cardId",
+    cardController.locker
+)
+
 
 export default router

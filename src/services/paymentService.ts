@@ -14,7 +14,7 @@ export async function payment(
   cardService.validateExpirationDate(card.expirationDate);
   cardService.validatePassword(password, card.password);
 
-  const business = await businessService.getById(id);
+  const business = await businessService.getBusinessById(id);
 
   if (card.type !== business.type) throw { 
     statusCode: 400,
