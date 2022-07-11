@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "First TypeScript projet at Driven T5",
   "type": "module",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node dist/app.ts",
+    "start": "dist/app.ts",
     "dev": "nodemon src/app.ts",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
