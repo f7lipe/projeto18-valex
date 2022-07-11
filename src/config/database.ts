@@ -1,8 +1,15 @@
-import dotenv from "dotenv";
 import pg from "pg";
-dotenv.config();
+import './setupEnv.ts'
 
 const { Pool } = pg;
-export const connection = new Pool({
+const databaseConfig = {
   connectionString: process.env.DATABASE_URL,
-});
+  ssl: {
+    rejectUnauthorized: process.env.MODE === `PROD` ? false : true,
+  },
+};
+
+const connection = new Pool(databaseConfig)
+
+
+export default connection 

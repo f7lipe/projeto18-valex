@@ -5,5 +5,7 @@ import { Request, Response, NextFunction } from "express";
     req: Request,
     res: Response,
     next: NextFunction) {
-    if(err) res.status(err.statusCode).send(err.message)
+    const {statusCode, message} = err;
+    if(err) res.status(statusCode || 500).send(message || "Internal server error");
+    next()
 }
