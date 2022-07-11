@@ -30,6 +30,12 @@ router.post(
 
 router.post(
     "/recharge/:cardId",
+    cardController.recharge
 )
 
+
+router.post(
+    "/purchase",
+    cardController.purchase
+)
 export default router

@@ -4,7 +4,7 @@ import * as businessService from "../services/businessService.js";
 import * as cardService from "../services/cardServices.js";
 import { sumTransactionWithAmount } from "./transactionService.js";
 
-export async function payment(
+export async function pay(
   id: number,
   password: string,
   businessId: number,

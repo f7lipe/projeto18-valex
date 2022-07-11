@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as cardService from "../services/cardServices.js"
+import * as paymentService from "../services/paymentService.js"
 
 export async function createCard(req: Request, res: Response) {
     const apiKey = res.locals.apiKey
@@ -34,5 +35,13 @@ export async function recharge(req: Request, res: Response){
     const {amount} = req.body;
 
     await cardService.recharge(Number(cardId), amount);
+    res.sendStatus(200);
+}
+
+export async function purchase(req: Request, res: Response){
+    const { cardId } = req.params;
+    const {amount, businessId, password} = req.body;
+
+    await paymentService.pay(Number(cardId), password, businessId, amount);
     res.sendStatus(200);
 }
