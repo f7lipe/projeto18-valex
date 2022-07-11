@@ -13,14 +13,14 @@ router.post(
     )
 
 router.put(
-    "/cards/:id/activate", 
+    "/cards/:cardId/activate", 
     validationMiddleware.validateCardActivation,
     cardController.activateCard
     )
 
 router.get(
-    "/cards/:id",
-    cardController.getCard
+    "/balance/:cardId",
+    cardController.getBalance
 )
 
 

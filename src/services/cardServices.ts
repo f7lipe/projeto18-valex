@@ -6,28 +6,11 @@ import bcrypt from "bcrypt";
 import * as cardRepository from "../repositories/cardRepository.js";
 import * as companyService from "../services/companySerivice.js"
 import * as employeeService from "../services/employeeService.js"
+import * as paymentService from "../services/paymentService.js";
+import * as paymentRepository from "../repositories/paymentRepository.js";
+import * as rechargeRepository from "../repositories/rechargeRepository.js";
 
 const cryptr = new Cryptr('myTotallySecretKey');
-
-export async function createCard(apiKey: string, employeeId: number, type: cardRepository.TransactionTypes) {
-    await companyService.validateApiKey(apiKey)
-
-    const employee = await employeeService.getById(employeeId)
-
-    await isExistingCard(employeeId, type)
-
-    const cardData = generateCardData(employee.fullName)
-
-    await cardRepository.insert(
-        {
-            ...cardData,
-            employeeId,
-            isVirtual: false,
-            isBlocked: false,
-            type,
-        }
-    );
-}
 
 export async function activateCard(cardId: number, cvc: string, password: string) {
     const card = await getCardById(cardId);
@@ -53,6 +36,28 @@ export async function activateCard(cardId: number, cvc: string, password: string
   const hashedPassword = bcrypt.hashSync(password, 12);
   await cardRepository.update(cardId, { password: hashedPassword });
 }
+
+
+export async function createCard(apiKey: string, employeeId: number, type: cardRepository.TransactionTypes) {
+    await companyService.validateApiKey(apiKey)
+
+    const employee = await employeeService.getById(employeeId)
+
+    await isExistingCard(employeeId, type)
+
+    const cardData = generateCardData(employee.fullName)
+
+    await cardRepository.insert(
+        {
+            ...cardData,
+            employeeId,
+            isVirtual: false,
+            isBlocked: false,
+            type,
+        }
+    );
+}
+
 
 async function isExistingCard(employeeId: number, type: cardRepository.TransactionTypes) {
     const existingCard = await cardRepository.findByTypeAndEmployeeId(type, employeeId)
@@ -113,7 +118,7 @@ export async function getCardById(id: number) {
     return card;
   }
 
-  export function validateExpirationDate(expirationDate: string) {
+export function validateExpirationDate(expirationDate: string) {
     const today = dayjs().format("MM/YY");
     if (dayjs(today).isAfter(dayjs(expirationDate))) {
       throw { 
@@ -124,11 +129,32 @@ export async function getCardById(id: number) {
     }
   }
 
-  export function validateCVC(cvc: string, cardCVC: string) {
+export function validateCVC(cvc: string, cardCVC: string) {
   const isCVCValid = cvc === cardCVC
   if (!isCVCValid) throw {
     statusCode: 400, 
     type: "bad_request", 
     message: "CVC is invalid"
+  }
+}
+
+export function validatePassword(password: string, cardPassword: string) {
+    const isPasswordValid = bcrypt.compareSync(password, cardPassword);
+    if (!isPasswordValid) throw {
+        statusCode: 400,
+        type: "bad_request",
+     };
+    
+  }
+
+  
+export async function getBalance(cardId: number) {
+  const payments = await paymentRepository.findByCardId(cardId);
+  const recharges = await rechargeRepository.findByCardId(cardId);
+  const cardAmount = paymentService.getCardAmount(payments, recharges);
+  return {
+    cardAmount,
+    recharges, 
+    payments,
   }
 }
