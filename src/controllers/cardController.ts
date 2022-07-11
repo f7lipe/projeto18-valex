@@ -14,3 +14,9 @@ export async function activateCard(req: Request, res: Response) {
     await cardService.activateCard(Number(cardId), cvc, password);
     res.sendStatus(200);
 }
+
+export async function getCard(req: Request, res: Response) {
+    const { cardId } = req.params;
+    const card = await cardService.getCardById(Number(cardId));
+    res.json(card);
+}

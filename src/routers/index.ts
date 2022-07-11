@@ -12,10 +12,16 @@ router.post(
     cardController.createCard
     )
 
-router.post(
+router.put(
     "/cards/:id/activate", 
     validationMiddleware.validateCardActivation,
     cardController.activateCard
     )
+
+router.get(
+    "/cards/:id",
+    cardController.getCard
+)
+
 
 export default router
