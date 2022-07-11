@@ -28,3 +28,11 @@ export async function locker(req: Request, res: Response){
     await cardService.lockManager(Number(cardId), password);
     res.sendStatus(200);
 }
+
+export async function recharge(req: Request, res: Response){
+    const { cardId } = req.params;
+    const {amount} = req.body;
+
+    await cardService.recharge(Number(cardId), amount);
+    res.sendStatus(200);
+}

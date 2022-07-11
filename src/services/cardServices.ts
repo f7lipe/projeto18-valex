@@ -13,25 +13,25 @@ import * as rechargeRepository from "../repositories/rechargeRepository.js";
 const cryptr = new Cryptr('myTotallySecretKey');
 
 export async function activateCard(cardId: number, cvc: string, password: string) {
-    const card = await getCardById(cardId);
+  const card = await getCardById(cardId);
 
   validateExpirationDate(card.expirationDate);
   validateCVC(cvc, card.securityCode);
 
   const isAlreadyActive = card.password;
-  if (isAlreadyActive) throw { 
-    statusCode: 409, 
+  if (isAlreadyActive) throw {
+    statusCode: 409,
     type: "conflict",
-    message: "Card already active" 
-    }
-  
+    message: "Card already active"
+  }
+
   const passwordFormat = /^d{4}$/; // 4 digits
-  if (!passwordFormat.test(password)) throw { 
+  if (!passwordFormat.test(password)) throw {
     statusCode: 400,
     type: "bad_request",
     message: "Password must be 4 digits"
-   };
-  
+  };
+
 
   const hashedPassword = bcrypt.hashSync(password, 12);
   await cardRepository.update(cardId, { password: hashedPassword });
@@ -39,122 +39,121 @@ export async function activateCard(cardId: number, cvc: string, password: string
 
 
 export async function createCard(apiKey: string, employeeId: number, type: cardRepository.TransactionTypes) {
-    await companyService.validateApiKey(apiKey)
+  await companyService.validateApiKey(apiKey)
 
-    const employee = await employeeService.getEmplpyeeById(employeeId)
+  const employee = await employeeService.getEmplpyeeById(employeeId)
 
-    await isExistingCard(employeeId, type)
+  await isExistingCard(employeeId, type)
 
-    const cardData = generateCardData(employee.fullName)
+  const cardData = generateCardData(employee.fullName)
 
-    await cardRepository.insert(
-        {
-            ...cardData,
-            employeeId,
-            isVirtual: false,
-            isBlocked: false,
-            type,
-        }
-    );
+  await cardRepository.insert(
+    {
+      ...cardData,
+      employeeId,
+      isVirtual: false,
+      isBlocked: false,
+      type,
+    }
+  );
 }
 
 
 async function isExistingCard(employeeId: number, type: cardRepository.TransactionTypes) {
-    const existingCard = await cardRepository.findByTypeAndEmployeeId(type, employeeId)
-    if (existingCard) throw {
-        statusCode: 409,
-        type: "conflict",
-        message: "Card already exists"
-    }
+  const existingCard = await cardRepository.findByTypeAndEmployeeId(type, employeeId)
+  if (existingCard) throw {
+    statusCode: 409,
+    type: "conflict",
+    message: "Card already exists"
+  }
 
 }
 
 function generateCardData(employeeName: string) {
-    const number = faker.finance.creditCardNumber("mastercard");
-    const cardholderName = formatCardholderName(employeeName);
-    const expirationDate = dayjs().add(5, "year").format("MM/YY");
+  const number = faker.finance.creditCardNumber("mastercard");
+  const cardholderName = formatCardholderName(employeeName);
+  const expirationDate = dayjs().add(5, "year").format("MM/YY");
 
-    const hashedSecurityCode = generateSecurityCode();
+  const hashedSecurityCode = generateSecurityCode();
 
-    return {
-        number,
-        cardholderName,
-        securityCode: hashedSecurityCode,
-        expirationDate,
-    };
+  return {
+    number,
+    cardholderName,
+    securityCode: hashedSecurityCode,
+    expirationDate,
+  };
 }
 
 function generateSecurityCode() {
-    const securityCode = faker.finance.creditCardCVV();
-    return cryptr.encrypt(securityCode);
+  const securityCode = faker.finance.creditCardCVV();
+  return cryptr.encrypt(securityCode);
 }
 
 function formatCardholderName(fullName: string) {
-    const [firstName, ...nickNames] = fullName.split(" ")
-    const lastName = nickNames.pop();
-    const middleNames = nickNames.map((nickName)=> getFirsNameLetter(nickName))
-    
-    if (middleNames.length > 0) {
-        const formmatedName = `${firstName} ${middleNames.join(" ")} ${lastName}`
-        return formmatedName.toUpperCase();
-    }
+  const [firstName, ...nickNames] = fullName.split(" ")
+  const lastName = nickNames.pop();
+  const middleNames = nickNames.map((nickName) => getFirsNameLetter(nickName))
 
-    return [firstName, lastName].join(" ").toUpperCase();
+  if (middleNames.length > 0) {
+    const formmatedName = `${firstName} ${middleNames.join(" ")} ${lastName}`
+    return formmatedName.toUpperCase();
+  }
+
+  return [firstName, lastName].join(" ").toUpperCase();
 }
 
 function getFirsNameLetter(middleName: string) {
-    return middleName[0];
+  return middleName[0];
 }
 
 
 export async function getCardById(id: number) {
-    const card = await cardRepository.findById(id);
-    if (!card)  throw {  
-        statusCode: 404, 
-        type: "not_found", 
-        message: "Card not found" 
-    };
+  const card = await cardRepository.findById(id);
+  if (!card) throw {
+    statusCode: 404,
+    type: "not_found",
+    message: "Card not found"
+  };
 
-    return card;
-  }
+  return card;
+}
 
 export function validateExpirationDate(expirationDate: string) {
-    const today = dayjs().format("MM/YY");
-    if (dayjs(today).isAfter(dayjs(expirationDate))) {
-      throw { 
-        statusCode: 400, 
-        type: "bad_request", 
-        message: "Card expired" 
-        }
+  const today = dayjs().format("MM/YY");
+  if (dayjs(today).isAfter(dayjs(expirationDate))) {
+    throw {
+      statusCode: 400,
+      type: "bad_request",
+      message: "Card expired"
     }
   }
+}
 
 export function validateCVC(cvc: string, cardCVC: string) {
   const isCVCValid = cvc === cardCVC
   if (!isCVCValid) throw {
-    statusCode: 400, 
-    type: "bad_request", 
+    statusCode: 400,
+    type: "bad_request",
     message: "CVC is invalid"
   }
 }
 
 export function validatePassword(password: string, cardPassword: string) {
-    const isPasswordValid = bcrypt.compareSync(password, cardPassword);
-    if (!isPasswordValid) throw {
-        statusCode: 400,
-        type: "bad_request",
-     };
-    
-  }
+  const isPasswordValid = bcrypt.compareSync(password, cardPassword);
+  if (!isPasswordValid) throw {
+    statusCode: 400,
+    type: "bad_request",
+  };
 
-  
+}
+
 export async function getBalance(cardId: number) {
   const payments = await paymentRepository.findByCardId(cardId);
   const recharges = await rechargeRepository.findByCardId(cardId);
   const cardAmount = paymentService.getCardAmount(payments, recharges);
   return {
     cardAmount,
-    recharges, 
+    recharges,
     payments,
   }
 }
@@ -163,4 +162,18 @@ export async function lockManager(cardId: number, password: string) {
   const card = await getCardById(cardId);
   validatePassword(password, card.password);
   await cardRepository.update(cardId, { isBlocked: !card.isBlocked });
+}
+
+export async function recharge(cardId: number, amount: number) {
+  if (amount <= 0) throw {
+    statusCode: 400,
+    type: "bad_request",
+    message: "Amount must be greater than 0"
+  }
+
+  const recharge = await rechargeRepository.insert({
+    cardId,
+    amount,
+  });
+  return recharge;
 }

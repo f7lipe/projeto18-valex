@@ -13,7 +13,7 @@ router.post(
     )
 
 router.put(
-    "/cards/:cardId/activate", 
+    "/cards/:cardId", 
     validationMiddleware.validateCardActivation,
     cardController.activateCard
     )
@@ -28,5 +28,8 @@ router.post(
     cardController.locker
 )
 
+router.post(
+    "/recharge/:cardId",
+)
 
 export default router
