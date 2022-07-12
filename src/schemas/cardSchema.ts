@@ -16,3 +16,9 @@ export const activateCardSchema = Joi.object({
 });
 
 
+export const purchaseSchema = Joi.object({
+  cardId: Joi.number().required(),
+  password: Joi.string().length(4).required(),
+  purchaseAmount: Joi.number().integer().min(1).required(),
+  businessId: Joi.number().required(),
+});

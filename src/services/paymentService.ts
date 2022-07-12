@@ -2,7 +2,7 @@ import * as paymentRepository from "../repositories/paymentRepository.js";
 import * as rechargeRepository from "../repositories/rechargeRepository.js";
 import * as businessService from "../services/businessService.js";
 import * as cardService from "../services/cardServices.js";
-import { sumTransactionWithAmount } from "./transactionService.js";
+import { sumTransactions } from "./transactionService.js";
 
 export async function pay(
   id: number,
@@ -12,6 +12,21 @@ export async function pay(
 ) {
   const card = await cardService.getCardById(id);
   cardService.validateExpirationDate(card.expirationDate);
+
+  const isAlreadyActive = card.password;
+  if (!isAlreadyActive) throw {
+    statusCode: 409,
+    type: "conflict",
+    message: "Card not active"
+  }
+
+  const isBlocked = card.isBlocked
+  if (isBlocked) throw {
+    statusCode: 409,
+    type: "conflict",
+    message: "Card is blocked"
+  }
+
   cardService.validatePassword(password, card.password);
 
   const business = await businessService.getBusinessById(id);
@@ -22,7 +37,6 @@ export async function pay(
     message: "Card type does not match business type"
   };
   
-
   const payments = await paymentRepository.findByCardId(id);
   const recharges = await rechargeRepository.findByCardId(id);
 
@@ -41,7 +55,7 @@ export function getCardAmount(
   payments: paymentRepository.PaymentWithBusinessName[],
   recharges: rechargeRepository.Recharge[]
 ) {
-  const totalPaymentAmount = payments.reduce(sumTransactionWithAmount, 0);
-  const totalRechargeAmount = recharges.reduce(sumTransactionWithAmount, 0);
+  const totalPaymentAmount = payments.reduce(sumTransactions, 0);
+  const totalRechargeAmount = recharges.reduce(sumTransactions, 0);
   return totalRechargeAmount - totalPaymentAmount;
 }

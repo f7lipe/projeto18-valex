@@ -1,3 +1,5 @@
+import "../config/setupEnv.js"
+
 import { faker } from "@faker-js/faker";
 import dayjs from "dayjs";
 import Cryptr from "cryptr";
@@ -10,34 +12,9 @@ import * as paymentService from "../services/paymentService.js";
 import * as paymentRepository from "../repositories/paymentRepository.js";
 import * as rechargeRepository from "../repositories/rechargeRepository.js";
 
-const cryptr = new Cryptr('myTotallySecretKey');
+const cryptr = new Cryptr(process.env.CRYPTO_SECRET);
 
-export async function activateCard(cardId: number, cvc: string, password: string) {
-  const card = await getCardById(cardId);
-
-  validateExpirationDate(card.expirationDate);
-  validateCVC(cvc, card.securityCode);
-
-  const isAlreadyActive = card.password;
-  if (isAlreadyActive) throw {
-    statusCode: 409,
-    type: "conflict",
-    message: "Card already active"
-  }
-
-  const passwordFormat = /^d{4}$/; // 4 digits
-  if (!passwordFormat.test(password)) throw {
-    statusCode: 400,
-    type: "bad_request",
-    message: "Password must be 4 digits"
-  };
-
-
-  const hashedPassword = bcrypt.hashSync(password, 12);
-  await cardRepository.update(cardId, { password: hashedPassword });
-}
-
-
+/// CARD CREATION
 export async function createCard(apiKey: string, employeeId: number, type: cardRepository.TransactionTypes) {
   await companyService.validateApiKey(apiKey)
 
@@ -57,7 +34,6 @@ export async function createCard(apiKey: string, employeeId: number, type: cardR
     }
   );
 }
-
 
 async function isExistingCard(employeeId: number, type: cardRepository.TransactionTypes) {
   const existingCard = await cardRepository.findByTypeAndEmployeeId(type, employeeId)
@@ -84,11 +60,6 @@ function generateCardData(employeeName: string) {
   };
 }
 
-function generateSecurityCode() {
-  const securityCode = faker.finance.creditCardCVV();
-  return cryptr.encrypt(securityCode);
-}
-
 function formatCardholderName(fullName: string) {
   const [firstName, ...nickNames] = fullName.split(" ")
   const lastName = nickNames.pop();
@@ -106,6 +77,37 @@ function getFirsNameLetter(middleName: string) {
   return middleName[0];
 }
 
+function generateSecurityCode() {
+  const securityCode = faker.finance.creditCardCVV();
+  return cryptr.encrypt(securityCode);
+}
+
+/// CARD ACTIVATION
+export async function activateCard(cardId: number, cvc: string, password: string) {
+  const card = await getCardById(cardId);
+
+  validateExpirationDate(card.expirationDate);
+
+  const isAlreadyActive = card.password;
+  if (isAlreadyActive) throw {
+    statusCode: 409,
+    type: "conflict",
+    message: "Card already active"
+  }
+
+  validateCVC(cvc, cryptr.decrypt(card.securityCode));
+  
+  const passwordFormat = /^d{4}$/; // 4 digits
+  if (!passwordFormat.test(password)) throw {
+    statusCode: 400,
+    type: "bad_request",
+    message: "Password must be 4 digits"
+  };
+
+
+  const hashedPassword = bcrypt.hashSync(password, 12);
+  await cardRepository.update(cardId, { password: hashedPassword });
+}
 
 export async function getCardById(id: number) {
   const card = await cardRepository.findById(id);
@@ -138,6 +140,14 @@ export function validateCVC(cvc: string, cardCVC: string) {
   }
 }
 
+/// CARD BLOCKING
+export async function lockManager(cardId: number, password: string) {
+  const card = await getCardById(cardId);
+  validateExpirationDate(card.expirationDate);
+  validatePassword(password, card.password);
+  await cardRepository.update(cardId, { isBlocked: !card.isBlocked });
+}
+
 export function validatePassword(password: string, cardPassword: string) {
   const isPasswordValid = bcrypt.compareSync(password, cardPassword);
   if (!isPasswordValid) throw {
@@ -147,7 +157,9 @@ export function validatePassword(password: string, cardPassword: string) {
 
 }
 
+/// CARD BALANCE  
 export async function getBalance(cardId: number) {
+  const card = await getCardById(cardId);
   const payments = await paymentRepository.findByCardId(cardId);
   const recharges = await rechargeRepository.findByCardId(cardId);
   const cardAmount = paymentService.getCardAmount(payments, recharges);
@@ -158,20 +170,23 @@ export async function getBalance(cardId: number) {
   }
 }
 
-export async function lockManager(cardId: number, password: string) {
-  const card = await getCardById(cardId);
-  validatePassword(password, card.password);
-  await cardRepository.update(cardId, { isBlocked: !card.isBlocked });
+/// CARD RECHARGE
+export async function recharge(apiKey:string ,cardId: number, amount: number) {
+await companyService.validateApiKey(apiKey)
+const card = await getCardById(cardId);
+const isAlreadyActive = card.password;
+if (!isAlreadyActive) throw {
+  statusCode: 409,
+  type: "conflict",
+  message: "Card not active"
 }
-
-export async function recharge(cardId: number, amount: number) {
-  if (amount <= 0) throw {
+validateExpirationDate(card.expirationDate);
+if (amount <= 0) throw {
     statusCode: 400,
     type: "bad_request",
     message: "Amount must be greater than 0"
   }
-
-  const recharge = await rechargeRepository.insert({
+const recharge = await rechargeRepository.insert({
     cardId,
     amount,
   });
