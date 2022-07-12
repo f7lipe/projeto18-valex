@@ -32,6 +32,7 @@ router.post(
 
 router.post(
     "/recharge/:cardId",
+    validateApiKey,
     cardController.recharge
 )
 

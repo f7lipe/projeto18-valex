@@ -23,6 +23,8 @@ export async function createCard(apiKey: string, employeeId: number, type: cardR
   await isExistingCard(employeeId, type)
 
   const cardData = generateCardData(employee.fullName)
+  const unecrypedCardData = { ...cardData, employeeId, type }
+  cardData.securityCode = cryptr.encrypt(cardData.securityCode);
 
   await cardRepository.insert(
     {
@@ -33,6 +35,7 @@ export async function createCard(apiKey: string, employeeId: number, type: cardR
       type,
     }
   );
+  return {unecrypedCardData}
 }
 
 async function isExistingCard(employeeId: number, type: cardRepository.TransactionTypes) {
@@ -50,12 +53,10 @@ function generateCardData(employeeName: string) {
   const cardholderName = formatCardholderName(employeeName);
   const expirationDate = dayjs().add(5, "year").format("MM/YY");
 
-  const hashedSecurityCode = generateSecurityCode();
-
   return {
     number,
     cardholderName,
-    securityCode: hashedSecurityCode,
+    securityCode: generateSecurityCode(),
     expirationDate,
   };
 }
@@ -79,7 +80,7 @@ function getFirsNameLetter(middleName: string) {
 
 function generateSecurityCode() {
   const securityCode = faker.finance.creditCardCVV();
-  return cryptr.encrypt(securityCode);
+  return securityCode
 }
 
 /// CARD ACTIVATION
@@ -97,8 +98,8 @@ export async function activateCard(cardId: number, cvc: string, password: string
 
   validateCVC(cvc, cryptr.decrypt(card.securityCode));
   
-  const passwordFormat = /^d{4}$/; // 4 digits
-  if (!passwordFormat.test(password)) throw {
+  const passwordFormat = /^SW[0-9]{4}$/; // 4 digits
+  if ((passwordFormat.test(password))) throw {
     statusCode: 400,
     type: "bad_request",
     message: "Password must be 4 digits"
@@ -146,6 +147,7 @@ export async function lockManager(cardId: number, password: string) {
   validateExpirationDate(card.expirationDate);
   validatePassword(password, card.password);
   await cardRepository.update(cardId, { isBlocked: !card.isBlocked });
+  return { isBlocked: !card.isBlocked }
 }
 
 export function validatePassword(password: string, cardPassword: string) {
@@ -181,7 +183,7 @@ if (!isAlreadyActive) throw {
   message: "Card not active"
 }
 validateExpirationDate(card.expirationDate);
-if (amount <= 0) throw {
+if (amount <= 0 || !amount) throw {
     statusCode: 400,
     type: "bad_request",
     message: "Amount must be greater than 0"

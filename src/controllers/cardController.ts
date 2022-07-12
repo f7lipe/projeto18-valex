@@ -5,8 +5,8 @@ import * as paymentService from "../services/paymentService.js"
 export async function createCard(req: Request, res: Response) {
     const apiKey = res.locals.apiKey
     const { employeeId, type } = req.body;
-    await cardService.createCard(apiKey, employeeId, type);
-    res.sendStatus(201);
+    const card = await cardService.createCard(apiKey, employeeId, type);
+    res.status(201).send(card);
 }
 
 export async function activateCard(req: Request, res: Response) {
@@ -26,15 +26,17 @@ export async function locker(req: Request, res: Response){
     const { cardId } = req.params;
     const {password} = req.body;
 
-    await cardService.lockManager(Number(cardId), password);
-    res.sendStatus(200);
+    const lockStatus = await cardService.lockManager(Number(cardId), password);
+    res.status(200).send(lockStatus);
 }
 
 export async function recharge(req: Request, res: Response){
+    const apiKey = res.locals.apiKey
+    console.log(apiKey)
     const { cardId } = req.params;
     const {amount} = req.body;
 
-    await cardService.recharge(Number(cardId), amount);
+    await cardService.recharge(apiKey, Number(cardId), amount);
     res.sendStatus(200);
 }
 
