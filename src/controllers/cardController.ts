@@ -41,9 +41,9 @@ export async function recharge(req: Request, res: Response){
 }
 
 export async function purchase(req: Request, res: Response){
-    const { cardId } = req.params;
-    const {amount, businessId, password} = req.body;
 
-    await paymentService.pay(Number(cardId), password, businessId, amount);
+    const {cardId, purchaseAmount, businessId, password} = req.body;
+
+    await paymentService.pay(Number(cardId), password, businessId, purchaseAmount);
     res.sendStatus(200);
 }

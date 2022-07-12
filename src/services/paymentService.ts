@@ -10,6 +10,7 @@ export async function pay(
   businessId: number,
   amount: number
 ) {
+  console.log(amount, businessId, password, id);
   const card = await cardService.getCardById(id);
   cardService.validateExpirationDate(card.expirationDate);
 
